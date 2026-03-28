@@ -35,6 +35,8 @@ module i2s_receiver (
 
     wire bck_rise = i2s_ck && !i2s_ck_d;
 
+    wire [31:0] acc_next = acc + ACC_INC;
+
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             acc      <= 32'd0;
@@ -42,10 +44,11 @@ module i2s_receiver (
             i2s_ck_d <= 1'b0;
         end else begin
             i2s_ck_d <= i2s_ck;
-            acc <= acc + ACC_INC;
-            if (acc >= ACC_MOD) begin
-                acc <= acc - ACC_MOD;
+            if (acc_next >= ACC_MOD) begin
+                acc    <= acc_next - ACC_MOD;
                 i2s_ck <= ~i2s_ck;
+            end else begin
+                acc <= acc_next;
             end
         end
     end

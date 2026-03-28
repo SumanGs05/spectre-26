@@ -7,7 +7,7 @@ audio:
 
 serial:
   port: "/dev/ttyACM0"        # Tang Nano 9K USB-UART device
-  baudrate: 2000000           # 2 Mbaud
+  baudrate: 1500000           # 1.5 Mbaud (27 MHz / 18, exact)
   timeout: 0.1                # seconds
 
 frame:

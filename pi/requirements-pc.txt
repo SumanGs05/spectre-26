@@ -1,0 +1,5 @@
+# PC-only: listen to Tang Nano UART from Windows/Linux (see tools/pc_audio_monitor.py)
+pyserial
+numpy
+sounddevice
+scipy

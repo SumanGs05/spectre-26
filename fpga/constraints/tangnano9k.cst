@@ -8,9 +8,9 @@
 IO_LOC "clk_27m" 52;
 IO_PORT "clk_27m" IO_TYPE=LVCMOS33 PULL_MODE=NONE;
 
-// --- Reset Button (active-low, S1 on board) ---
+// --- Reset: active-low, tied to S1 (pin 4, 1.8 V bank — use LVCMOS18 for CT1136) ---
 IO_LOC "rst_n" 4;
-IO_PORT "rst_n" IO_TYPE=LVCMOS33 PULL_MODE=UP;
+IO_PORT "rst_n" IO_TYPE=LVCMOS18 PULL_MODE=UP;
 
 // --- I2S master: bit clock + word select to mic array ---
 IO_LOC "i2s_ck" 25;
@@ -29,6 +29,11 @@ IO_PORT "i2s_d1" IO_TYPE=LVCMOS33 PULL_MODE=DOWN;
 IO_PORT "i2s_d2" IO_TYPE=LVCMOS33 PULL_MODE=DOWN;
 IO_PORT "i2s_d3" IO_TYPE=LVCMOS33 PULL_MODE=DOWN;
 
-// --- UART TX (to onboard USB-UART bridge, BL702) ---
+// --- UART TX → onboard USB-UART (BL702) → host COM port ---
+// Stock Nano 9K: TXD = pin 17. Wrong IO_LOC = silent serial.
 IO_LOC "uart_tx" 17;
 IO_PORT "uart_tx" IO_TYPE=LVCMOS33 DRIVE=8;
+
+// --- Heartbeat LED (LED1, pin 10, 1.8 V bank) ---
+IO_LOC "led_prog" 10;
+IO_PORT "led_prog" IO_TYPE=LVCMOS18 PULL_MODE=NONE DRIVE=8;

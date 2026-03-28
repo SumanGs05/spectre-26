@@ -14,7 +14,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 DEFAULT_PORT = "/dev/ttyACM0"
-DEFAULT_BAUDRATE = 2_000_000
+DEFAULT_BAUDRATE = 1_500_000
 READ_CHUNK_SIZE = 4096
 
 

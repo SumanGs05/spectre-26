@@ -1,15 +1,13 @@
 /**
- * UART Transmitter — 2 Mbaud, 8N1
+ * UART Transmitter — configurable baud, 8N1
  *
  * Sends bytes to the Tang Nano 9K's onboard USB-UART bridge.
- * At 27 MHz system clock, 2 Mbaud requires ~13.5 clocks per bit.
- * We use a clock divider of 14 (actual baud: 27M/14 ≈ 1.928 Mbaud,
- * within UART tolerance).
+ * Default 1.5 Mbaud: CLKS_PER_BIT = 18 (27 MHz / 18, exact).
  */
 
 module uart_tx #(
     parameter CLK_FREQ  = 27_000_000,
-    parameter BAUD_RATE = 2_000_000
+    parameter BAUD_RATE = 1_500_000
 )(
     input  wire       clk,
     input  wire       rst_n,
@@ -19,7 +17,7 @@ module uart_tx #(
     output wire       ready         // High when idle, can accept data
 );
 
-    localparam CLKS_PER_BIT = CLK_FREQ / BAUD_RATE; // ~14
+    localparam CLKS_PER_BIT = (CLK_FREQ + BAUD_RATE / 2) / BAUD_RATE;
 
     localparam S_IDLE  = 2'd0;
     localparam S_START = 2'd1;
