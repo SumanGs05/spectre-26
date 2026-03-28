@@ -1,0 +1,65 @@
+audio:
+  sample_rate: 16000          # Hz, per channel after CIC decimation
+  bit_depth: 16               # bits, after mu-law decode
+  num_channels: 7             # 6 outer + 1 center
+  fft_size: 1024              # samples per FFT window (64 ms at 16 kHz)
+  hop_size: 512               # 50% overlap → ~31 Hz update rate
+
+serial:
+  port: "/dev/ttyACM0"        # Tang Nano 9K USB-UART device
+  baudrate: 2000000           # 2 Mbaud
+  timeout: 0.1                # seconds
+
+frame:
+  sync_word: 0xAA55
+  samples_per_frame: 32       # batched samples per TDM frame
+  channels_per_sample: 7
+  bytes_per_channel: 1        # mu-law compressed (8-bit)
+  crc_bytes: 2                # CRC16 trailer
+  # frame_size = 2 (sync) + 32*7 (payload) + 2 (crc) = 228 bytes
+
+mic_array:
+  type: "sipeed_6plus1"
+  radius_m: 0.035             # 35 mm outer mic radius
+  num_outer: 6                # mics on perimeter (used for DOA)
+  num_center: 1               # center mic (used as classifier input)
+  speed_of_sound: 343.0       # m/s at ~20°C
+
+spectral_subtraction:
+  hover_frequency: 200.0      # Hz, fundamental motor frequency
+  num_harmonics: 8            # harmonics to remove (200, 400, ... 1600 Hz)
+  oversubtraction: 2.0        # alpha factor for noise overestimation
+  spectral_floor: 0.01        # minimum gain to prevent musical noise
+
+denoiser:
+  enabled: true
+  library_path: "librnnoise"  # path to librnnoise shared library
+  frame_size: 480             # RNNoise native frame size (samples)
+
+classifier:
+  enabled: true
+  model_path: "models/yamnet.tflite"
+  confidence_threshold: 0.3   # minimum probability to trigger detection
+  human_classes:              # YAMNet class names that indicate human sound
+    - "Speech"
+    - "Shout"
+    - "Screaming"
+    - "Crying, sobbing"
+    - "Whimper"
+    - "Groan"
+    - "Yell"
+
+doa:
+  num_pairs: 15               # C(6,2) mic pairs from outer ring
+  histogram_bins: 360         # 1-degree resolution
+  histogram_sigma: 5.0        # Gaussian smoothing sigma (degrees)
+  min_confidence: 0.3         # below this, report no detection
+
+telemetry:
+  log_dir: "logs"
+  csv_enabled: true
+  websocket_enabled: true
+
+server:
+  host: "0.0.0.0"
+  port: 8080

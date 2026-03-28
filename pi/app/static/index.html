@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UAV-AudioLoc Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <h1>UAV-AudioLoc</h1>
+        <div id="connection-status" class="status-badge disconnected">DISCONNECTED</div>
+    </header>
+
+    <main>
+        <section class="polar-section">
+            <canvas id="polar-plot" width="500" height="500"></canvas>
+            <div class="azimuth-readout">
+                <span class="label">AZIMUTH</span>
+                <span id="azimuth-value" class="value">---</span>
+                <span class="unit">deg</span>
+            </div>
+        </section>
+
+        <section class="info-panel">
+            <div class="metric">
+                <span class="label">CONFIDENCE</span>
+                <div class="bar-container">
+                    <div id="confidence-bar" class="bar"></div>
+                </div>
+                <span id="confidence-value" class="value">0.00</span>
+            </div>
+
+            <div class="metric">
+                <span class="label">SNR</span>
+                <span id="snr-value" class="value">-- dB</span>
+            </div>
+
+            <div class="metric">
+                <span class="label">SOUND CLASS</span>
+                <span id="class-value" class="value tag">None</span>
+                <span id="class-conf-value" class="value small">0.00</span>
+            </div>
+
+            <div class="metric">
+                <span class="label">DETECTION</span>
+                <div id="detection-indicator" class="indicator off"></div>
+            </div>
+
+            <div class="metric">
+                <span class="label">FRAME</span>
+                <span id="frame-value" class="value small">0</span>
+            </div>
+        </section>
+
+        <section class="log-section">
+            <h2>Detection Log</h2>
+            <div id="log-container">
+                <table id="log-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Azimuth</th>
+                            <th>Conf</th>
+                            <th>Class</th>
+                            <th>SNR</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-body"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="/static/dashboard.js"></script>
+</body>
+</html>

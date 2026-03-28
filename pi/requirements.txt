@@ -1,0 +1,10 @@
+numpy
+scipy
+pyserial
+fastapi
+uvicorn[standard]
+websockets
+pyyaml
+pytest
+tflite-runtime
+resampy
