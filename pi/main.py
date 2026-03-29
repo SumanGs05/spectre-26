@@ -2,7 +2,7 @@
 UAV-AudioLoc — Real-time pipeline orchestrator.
 
 Ties together all processing stages:
-    USB-Serial Capture → Frame Parse → Spectral Sub → RNNoise
+    Dual ESP32-S3 UART Capture → Merge → Spectral Sub → RNNoise
     → YAMNet Classifier → GCC-PHAT → DOA → Telemetry
 
 Designed for autonomous drone operation: outputs machine-consumable
@@ -17,8 +17,7 @@ import yaml
 import numpy as np
 from pathlib import Path
 
-from capture.serial_reader import SerialReader
-from capture.frame_parser import FrameParser
+from capture.serial_reader import DualSerialReader
 from dsp.spectral_sub import SpectralSubtractor
 from dsp.gcc_phat import gcc_phat_batch
 from dsp.doa_estimator import DOAEstimator
@@ -45,7 +44,6 @@ class AudioLocPipeline:
 
         # Processing components (initialized in setup())
         self.serial_reader = None
-        self.frame_parser = None
         self.spectral_sub = None
         self.denoiser = None
         self.classifier = None
@@ -70,16 +68,19 @@ class AudioLocPipeline:
         hop_size = audio_cfg["hop_size"]
         n_ch = audio_cfg["num_channels"]
 
-        # Capture
+        # Capture — dual ESP32-S3 boards via two UARTs
         serial_cfg = cfg["serial"]
-        self.serial_reader = SerialReader(
-            port=serial_cfg["port"],
-            baudrate=serial_cfg["baudrate"],
+        self.serial_reader = DualSerialReader(
+            port_master=serial_cfg["port_master"],
+            port_slave=serial_cfg["port_slave"],
+            baud=serial_cfg["baud"],
             timeout=serial_cfg["timeout"],
         )
-        self.frame_parser = FrameParser()
 
-        # DSP
+        # TODO(migration): ESP32-S3 boards already run LMS + spectral
+        # subtraction on-chip (hover 180 Hz, alpha 2.0). Running Pi-side
+        # spectral subtraction again may cause over-suppression. Consider
+        # disabling once ESP32 filtering is verified.
         ss_cfg = cfg["spectral_subtraction"]
         self.spectral_sub = SpectralSubtractor(
             sample_rate=sr,
@@ -164,16 +165,12 @@ class AudioLocPipeline:
 
         try:
             while self._running:
-                raw = self.serial_reader.read(timeout=0.05)
-                if raw is None:
-                    continue
-
-                audio_block = self.frame_parser.feed(raw)
+                audio_block = self.serial_reader.read(timeout=0.05)
                 if audio_block is None:
                     continue
 
-                # audio_block: shape (7, N) int16 → float32 normalized
-                audio = audio_block.astype(np.float32) / 32768.0
+                # audio_block: shape (7, 256) int32 from merged ESP32-S3 pair
+                audio = audio_block.astype(np.float32) / 2147483648.0
 
                 self._audio_buffer = np.concatenate(
                     [self._audio_buffer, audio], axis=1
@@ -204,6 +201,11 @@ class AudioLocPipeline:
             cleaned = self.denoiser.denoise_multichannel(cleaned)
 
         # Stage 3: Sound classification on center mic (gate)
+        # TODO(migration): mic6 (centre, index 6) now arrives from the Slave
+        # ESP32-S3 board where it served as the LMS noise reference. It passes
+        # through the LMS filter unchanged (no subtraction applied to the ref
+        # channel itself), but its signal path differs from the old FPGA direct
+        # capture. Verify classifier accuracy is not affected.
         center_audio = cleaned[CENTER_MIC_INDEX]
         is_human, sound_class, class_conf = self.classifier.classify(center_audio)
 
@@ -262,7 +264,8 @@ class AudioLocPipeline:
         if self.telemetry:
             self.telemetry.stop()
         logger.info("Pipeline shutdown complete")
-        logger.info("Frame stats: %s", self.frame_parser.stats)
+        logger.info("Reader stats: %s",
+                     self.serial_reader.stats if self.serial_reader else {})
 
 
 def main():

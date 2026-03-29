@@ -1,9 +1,15 @@
 """
-TDM frame parser for FPGA-to-Pi data stream.
+LEGACY — FPGA-era TDM frame parser (Tang Nano 9K).
 
-Handles sync word detection, CRC16 validation, mu-law decoding,
-and unpacking of 7-channel audio from the batched TDM frame format:
+TODO(migration): This parser handles the old FPGA mu-law TDM format
+(228-byte frames, 32×7 mu-law samples). The ESP32-S3 architecture uses
+a completely different frame format: [AA][55][board_id][ch_count][int32
+LE interleaved payload][CRC16], with 4102-byte (Master) or 3078-byte
+(Slave) frames and no mu-law encoding. The new frame parsing is handled
+inside capture/serial_reader.py (DualSerialReader). This file is kept
+for reference and for any tools still using the old format.
 
+Old format:
     | SYNC (0xAA55) | 32 x [CH0..CH6] mu-law bytes | CRC16 |
     |   2 bytes     | 224 bytes                     | 2 bytes|
     Total: 228 bytes per frame

@@ -1,5 +1,10 @@
 # UAV-AudioLoc — Issues, Root Causes, and Fixes
 
+> **Note (migration):** The Tang Nano 9K FPGA has been replaced by two Seeed
+> XIAO ESP32-S3 boards. The issues below document the **legacy FPGA bring-up**
+> and remain for historical reference. For the new ESP32-S3 architecture, see
+> `README.md` and `esp32/` folder.
+
 Chronicle of hardware / FPGA / host bring-up problems solved while bringing **Tang Nano 9K → USB-UART → PC/Pi** online for **TDM mu-law frames** (`0xAA55` + 224 B payload + CRC16).
 
 ---

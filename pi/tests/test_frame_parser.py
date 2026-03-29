@@ -1,5 +1,11 @@
 """
-Tests for TDM frame parser.
+Tests for LEGACY FPGA TDM frame parser.
+
+TODO(migration): These tests cover the old FPGA mu-law frame format (228 bytes,
+32×7 samples). The ESP32-S3 architecture uses a completely different frame format
+(int32 PCM, board_id/ch_count header, CRC over payload only). New tests for the
+ESP32-S3 frame parsing are needed — the parsing logic lives in
+capture/serial_reader.py (DualSerialReader / _read_frame).
 
 Verifies sync word detection, CRC validation, mu-law decoding,
 and error handling for corrupted/partial frames.

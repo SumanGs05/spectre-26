@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
-One-shot: read a chunk from COM, run FrameParser, count raw AA55 pairs.
+TODO(migration): This tool uses the LEGACY FPGA FrameParser (228-byte mu-law
+frames). It does NOT decode ESP32-S3 frames (int32 PCM with board_id header).
+The AA55 sync detection and byte-level probe still work for checking whether
+each ESP32-S3 port is sending data, but the FrameParser decode will fail on
+the new format. For proper ESP32-S3 frame validation, use esp32/serial_merge.py.
 
-Use when pc_audio_monitor shows bytes but frames_ok=0.
+One-shot: read a chunk from COM, count raw AA55 pairs, try FrameParser decode.
 
   cd pi
-  python tools/serial_frame_probe.py COM3 2000000
-  python tools/serial_frame_probe.py COM3 1928571
-  python tools/serial_frame_probe.py COM3 2000000 --seconds 15 --no-flush
+  python tools/serial_frame_probe.py /dev/ttyUSB0
+  python tools/serial_frame_probe.py /dev/ttyUSB1 --seconds 15 --no-flush
 """
 
 from __future__ import annotations
@@ -28,6 +31,8 @@ except ImportError:
 
 from capture.frame_parser import FrameParser  # noqa: E402
 
+BAUD = 1500000
+
 
 def count_aa55(data: bytes) -> int:
     return sum(1 for i in range(len(data) - 1) if data[i] == 0xAA and data[i + 1] == 0x55)
@@ -36,7 +41,6 @@ def count_aa55(data: bytes) -> int:
 def main() -> None:
     ap = argparse.ArgumentParser(description="Serial TDM frame probe")
     ap.add_argument("port", nargs="?", default="COM3", help="COM port")
-    ap.add_argument("baud", nargs="?", type=int, default=1_500_000, help="Baud rate")
     ap.add_argument(
         "--seconds",
         type=float,
@@ -50,15 +54,15 @@ def main() -> None:
     )
     args = ap.parse_args()
 
-    port, baud = args.port, args.baud
+    port = args.port
     print(
-        f"Port {port} @ {baud} — close Gowin Programmer/IDE first.\n"
+        f"Port {port} @ {BAUD} — close Gowin Programmer/IDE first.\n"
         f"Reading up to 300 KiB or {args.seconds:.0f} s…"
     )
 
     ser = serial.Serial(
         port=port,
-        baudrate=baud,
+        baudrate=BAUD,
         timeout=0.1,
         bytesize=serial.EIGHTBITS,
         parity=serial.PARITY_NONE,
@@ -84,11 +88,11 @@ def main() -> None:
 
     if len(raw) == 0:
         print(
-            "\nZero bytes — another app may hold the port, USB not enumerating, or FPGA not sending.\n"
+            "\nZero bytes — another app may hold the port, USB not enumerating, "
+            "or ESP32-S3 not sending.\n"
             "  • Quit Programmer / PuTTY / other serial tools\n"
-            "  • Unplug USB 5s, replug, confirm COM in Device Manager\n"
-            "  • FPGA LED should blink; reprogram if needed\n"
-            "  • Retry with:  python tools/serial_frame_probe.py COM3 2000000 --no-flush"
+            "  • Unplug USB 5s, replug, confirm port in Device Manager\n"
+            "  • Retry with:  python tools/serial_frame_probe.py /dev/ttyUSB0 --no-flush"
         )
         raise SystemExit(1)
 
@@ -113,21 +117,21 @@ def main() -> None:
 
     if st["frames_parsed"] == 0 and count_aa55(raw) == 0:
         print(
-            "\nNo AA55 in this capture → wrong baud for BL702/Windows, DEBUG_UART_BLIND only, "
-            "or noise. Try bauds 2000000, 1928571, 2076923, then FPGA  parameter UART_BAUD = 921_600;  "
-            "and probe @ 921600."
+            "\nNo AA55 in this capture → wrong baud, ESP32-S3 not running, "
+            f"or noise. Expect {BAUD} baud (match ESP32-S3 firmware)."
         )
     elif st["frames_parsed"] == 0 and st["frames_dropped"] > 0:
         print(
-            "\nAA55 seen but CRC fails → baud marginal or format mismatch. "
-            "Try other --baud; rebuild FPGA after uart_tx / top changes."
+            "\nAA55 seen but CRC fails → baud marginal or format mismatch at 1500000. "
+            "Note: this tool uses the legacy FPGA parser; ESP32-S3 frames will "
+            "fail CRC here. Use esp32/serial_merge.py for ESP32 validation."
         )
     elif st["frames_parsed"] == 0 and count_aa55(raw) > 0 and st["frames_dropped"] == 0:
         print(
             "\nAA55 present but no full valid frame — run with --seconds 30 for a longer capture."
         )
     else:
-        print("\nFrames decode OK at this baud — use the same --baud in pc_audio_monitor.py.")
+        print("\nFrames decode OK — pc_audio_monitor uses the same 1500000 baud.")
 
 
 if __name__ == "__main__":

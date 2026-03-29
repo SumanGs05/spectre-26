@@ -100,4 +100,10 @@ DEFAULT_POSITIONS = get_mic_positions()
 DEFAULT_PAIRS = get_outer_pairs()
 DEFAULT_DISTANCES = get_pair_distances(DEFAULT_POSITIONS, DEFAULT_PAIRS)
 DEFAULT_PAIR_ANGLES = get_pair_angles(DEFAULT_POSITIONS, DEFAULT_PAIRS)
+
+# TODO(migration): mic6 (centre) now arrives from Slave ESP32-S3 board as the
+# last channel in the merged 7-ch frame. Index 6 is correct, but the signal
+# now passes through the Slave's I2S → float → back-to-int32 path and serves
+# as the LMS noise reference for mic4/mic5 on that board. Verify that the
+# centre mic signal quality is adequate for YAMNet classification.
 CENTER_MIC_INDEX = 6

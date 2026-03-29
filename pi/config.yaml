@@ -1,22 +1,25 @@
 audio:
-  sample_rate: 16000          # Hz, per channel after CIC decimation
-  bit_depth: 16               # bits, after mu-law decode
-  num_channels: 7             # 6 outer + 1 center
-  fft_size: 1024              # samples per FFT window (64 ms at 16 kHz)
-  hop_size: 512               # 50% overlap → ~31 Hz update rate
+  sample_rate: 22050          # Hz, ESP32-S3 I2S native sample rate
+  bit_depth: 32               # bits, PCM int32 from ESP32-S3 (LMS+SS filtered)
+  num_channels: 7             # 6 outer + 1 center (merged from two boards)
+  fft_size: 1024              # samples per FFT window (~46 ms at 22050 Hz)
+  hop_size: 512               # ~50% overlap
 
 serial:
-  port: "/dev/ttyACM0"        # Tang Nano 9K USB-UART device
-  baudrate: 1500000           # 1.5 Mbaud (27 MHz / 18, exact)
-  timeout: 0.1                # seconds
+  port_master: "/dev/ttyUSB0" # ESP32-S3 Master (mic0, mic1, mic2, mic3)
+  port_slave: "/dev/ttyUSB1"  # ESP32-S3 Slave  (mic4, mic5, mic6 centre)
+  baud: 1500000               # 1.5 Mbaud
+  timeout: 2.0                # seconds (per-frame read timeout)
 
 frame:
   sync_word: 0xAA55
-  samples_per_frame: 32       # batched samples per TDM frame
-  channels_per_sample: 7
-  bytes_per_channel: 1        # mu-law compressed (8-bit)
-  crc_bytes: 2                # CRC16 trailer
-  # frame_size = 2 (sync) + 32*7 (payload) + 2 (crc) = 228 bytes
+  dma_buf_len: 256            # samples per DMA buffer per channel
+  master_channels: 4          # mic0, mic1, mic2, mic3  (board_id 0x01)
+  slave_channels: 3           # mic4, mic5, mic6        (board_id 0x02)
+  bytes_per_sample: 4         # int32 PCM
+  crc_bytes: 2                # CRC16-CCITT over payload only
+  # Master frame: 4 header + 4*256*4 payload + 2 CRC = 4102 bytes
+  # Slave frame:  4 header + 3*256*4 payload + 2 CRC = 3078 bytes
 
 mic_array:
   type: "sipeed_6plus1"
@@ -25,6 +28,10 @@ mic_array:
   num_center: 1               # center mic (used as classifier input)
   speed_of_sound: 343.0       # m/s at ~20°C
 
+# TODO(migration): The ESP32-S3 boards already run spectral subtraction
+# on-chip (HOVER_FREQ_HZ=180, SS_ALPHA=2.0, SS_BETA=0.01). Running Pi-side
+# spectral subtraction again may cause double-processing artifacts. Consider
+# disabling or reducing oversubtraction here once ESP32 filtering is verified.
 spectral_subtraction:
   hover_frequency: 200.0      # Hz, fundamental motor frequency
   num_harmonics: 8            # harmonics to remove (200, 400, ... 1600 Hz)

@@ -5,6 +5,12 @@ Runs TFLite inference on the center microphone (CH6) to classify audio
 events. Acts as a gate: GCC-PHAT only runs when human-relevant sounds
 are detected (Scream, Shout, Cry, Speech), preventing false DOA from
 wind, birds, or mechanical noise.
+
+TODO(migration): mic6 (centre) now arrives from the Slave ESP32-S3 board
+where it is used as the LMS ego-noise reference. The channel passes through
+unfiltered (LMS is applied to mic4/mic5 using mic6 as reference, not to mic6
+itself), but the signal path differs from the old direct-FPGA capture. Verify
+that YAMNet classification accuracy is not degraded.
 """
 
 import numpy as np

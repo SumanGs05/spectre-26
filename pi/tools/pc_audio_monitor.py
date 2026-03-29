@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 """
+TODO(migration): This tool uses the LEGACY FPGA frame format (228-byte mu-law
+TDM frames from a single serial port). It does NOT work with the new ESP32-S3
+dual-board architecture (int32 PCM, board_id header, dual ports). For the new
+architecture, use esp32/serial_merge.py or the DualSerialReader in
+capture/serial_reader.py. This file is kept for reference until a dual-port
+version of the monitor is written.
+
 Play FPGA TDM audio on a PC (Windows COMx or Linux /dev/ttyACM0).
 
 Uses the same frame format as pi/capture/frame_parser.py (sync 0xAA55,
@@ -36,6 +43,7 @@ from capture.frame_parser import FrameParser  # noqa: E402
 
 SAMPLE_RATE = 16_000
 READ_Q_MAX = 512
+UART_BAUD = 1500000
 
 try:
     import sounddevice as sd
@@ -54,12 +62,6 @@ def main() -> None:
         "--port",
         default="COM3",
         help="Serial port (Windows: COM3, Linux: /dev/ttyACM0)",
-    )
-    p.add_argument(
-        "--baud",
-        type=int,
-        default=1_500_000,
-        help="Baud rate (default 1500000; exact from 27 MHz FPGA clock)",
     )
     p.add_argument(
         "--channel",
@@ -122,7 +124,7 @@ def main() -> None:
 
     ser = serial.Serial(
         port=args.port,
-        baudrate=args.baud,
+        baudrate=UART_BAUD,
         timeout=0.05,
         bytesize=serial.EIGHTBITS,
         parity=serial.PARITY_NONE,
@@ -166,7 +168,7 @@ def main() -> None:
     )
     reader_thread.start()
 
-    print(f"Opened {args.port} @ {args.baud}. Channel {args.channel}. Ctrl+C to stop.")
+    print(f"Opened {args.port} @ {UART_BAUD}. Channel {args.channel}. Ctrl+C to stop.")
     print("(Serial read runs on a background thread.)")
     if args.stats_only:
         print("Stats-only mode — no playback.")
@@ -246,12 +248,12 @@ def main() -> None:
                         and st["sync_losses"] == 0
                     ):
                         print(
-                            "    [!] No AA55 in decoded stream at this baud. "
-                            "Use --baud 1500000 (match FPGA)."
+                            "    [!] No AA55 in decoded stream. "
+                            "UART must be 1500000 baud (match FPGA)."
                         )
                     else:
                         print(
-                            "    [!] Bytes but frames_ok=0 — try --baud 1500000; "
+                            "    [!] Bytes but frames_ok=0 — check 1500000 baud vs FPGA; "
                             "if dropped>0, CRC errors at this baud."
                         )
                 elif (
@@ -261,7 +263,7 @@ def main() -> None:
                     and bps == 0
                 ):
                     print(
-                        "    [!] Earlier bytes never decoded. When data resumes use --baud 1500000."
+                        "    [!] Earlier bytes never decoded. When data resumes, expect 1500000 baud."
                     )
                     warned_stall_decode = True
                 sys.stdout.flush()
